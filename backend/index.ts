@@ -1,33 +1,24 @@
 import express, { Express, Request, Response } from 'express';
 import dotenv from 'dotenv';
+import { setTimeout } from 'timers/promises';
+import { SocketUnixClient } from './src/models/SocketUnixClient';
 
 dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT;
 const appUrl = process.env.APP_URL;
-
-
-const net = require('node:net');
-//const fs = require('node:fs');
-
-const socketPath = process.env.SOCKET_PATH;
-
-console.log('Conectando al socket en: ' + socketPath);
+const socketPath = process.env.SOCKET_KEYCOUNTER_PATH;
 
 function callbackDataSocket(nread:any, buf: any) {
     console.log('Data: ' + buf.slice(0, nread).toString());
 }
 
-const client = net.createConnection({
-    path: socketPath,
-    bytesRead: 2048,
-    setkeepAlive: true,
-    onread: {
-        buffer: Buffer.alloc(2048),
-        callback: callbackDataSocket
-    }
-});
+// Se inicia el socket solo si lo hemos establecido
+if (socketPath) {
+    const socketUnixKeycounter = new SocketUnixClient(socketPath, callbackDataSocket);
+}
+
 
 app.get('/', (req: Request, res: Response) => {
     res.send('Página Principal');
