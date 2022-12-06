@@ -8,8 +8,6 @@ export class SocketUnixClient {
 
     private timeoutConnect: any;
 
-    public test = 'CONTEXTO CORRECTO';
-
     constructor(path: string,
                 callback: Function,
                 options: SocketClientOptionsInterface|null = null) {
