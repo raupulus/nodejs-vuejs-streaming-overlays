@@ -11,7 +11,9 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },
   "dependencies": {
+    "socket.io-client": "^4.5.4",
     "vue": "^3.2.45",
+    "vue-3-socket.io": "^1.0.5",
     "vue-router": "^4.1.6"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 <template>
     <div class="box-stats">
-      <span class="stats">-{{current}}-</span>
+      <span class="stats">{{current}}</span>
 
     </div>
 </template>
@@ -13,9 +13,9 @@
 
     props: {
       current: {
-        type: String,
+        type: Number,
         required: false,
-        default: '0'
+        default: 0
       },
     },
 
@@ -50,7 +50,8 @@
   font-size: 6rem;
   line-height: 6rem;
   letter-spacing: 1.2rem;
-  background-color: rgb(69, 89, 241);
+  color: rgb(218, 59, 15);
+  background-color: rgb(255, 255, 255);
   align-self: flex-end;
 }
 </style>
