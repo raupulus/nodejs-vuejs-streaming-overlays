@@ -1,9 +1,12 @@
 <template>
     <div class="box-keycounter">
         <div class="box-frame">
-            <img src="@/assets/frames/initial.png" alt="keyboard" class="frame">
+            <img :src="currentImage"
+                  alt="keyboard"
+                  class="frame">
+
         </div>
-        <KeyCounterStats :current="current"/>
+        <KeyCounterStats :current="lastSocketRead.pulsations_current"/>
     </div>
 </template>
 
@@ -18,75 +21,150 @@ import { io } from "socket.io-client";
       KeyCounterStats
     },
 
-    setup(props) {
-        const current = ref(0);
+      setup(props) {
 
-        const increment = () => {
-            //current.value++;
-        }
+        // Opciones de la animación, se modifica dinámicamnte según la cantidad de pulsaciones en el tiempo.
+        const animationOptions = ref({
+            duration: 800, // Duración en ms
+            velocity: 100, // Velocidad en escala 100% = 300ms
+        });
+
+        // Última lectura por el socket
+        const lastSocketRead = ref({
+            pulsations_current: 0,
+            pulsations_total: 0,
+            pulsation_average: 0,
+        });
+
+        // Si hay una animación activa
+        const hasActiveAnimation = ref(false);
+
+        const currentImage = ref('/src/assets/frames/initial.png');
 
         // Esto será cada directorio en assets/frames
         const getGroupFrames = () => {
+            // TODO: Dinamizar, leer del fs
 
+            // Devuelve el nombre de cada directorio con frames
+            return [
+                '1','2','3','4','5','6','7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21'
+            ]
         }
 
-        // Esto será un array de frames, cada imagen dentro del directorio
-        const getFrames = () => {
+        let groupFrames = getGroupFrames();
 
+        // Esto será un array de frames, cada imagen dentro del directorio. Por ahora está hardcodeado.
+        const getFrames = (dir: string) => {
+
+            // Sacamos una matriz con los nombres de los frames
+            return [
+                '/src/assets/frames/' + dir + '/1.png',
+                '/src/assets/frames/' + dir + '/2.png',
+                '/src/assets/frames/' + dir + '/3.png',
+                '/src/assets/frames/' + dir + '/4.png',
+            ]
         }
+
 
         // Obtendrá un directorio Random del grupo de frames, devuelve
         // un array de frames
-        const getRandomFrame = () => {
+        const getRandomFrames = () => {
+            let randomDirName = groupFrames[Math.floor(Math.random() * groupFrames.length)];
 
+            console.log('randomDirName', randomDirName);
+
+            return getFrames(randomDirName);
         }
 
         // Cuando recibamos muchos datos seguidos, recalcular velocidad de animación para aumentar/disminuir
         const recalcVelocity = () => {
+            let average = lastSocketRead.value.pulsation_average;
 
+            if (average > 250) {
+                animationOptions.value.velocity = 10;
+            } else if (average > 200) {
+                animationOptions.value.velocity = 20;
+            } else if (average > 150) {
+                animationOptions.value.velocity = 40;
+            } else if (average > 100) {
+                animationOptions.value.velocity = 60;
+            } else if (average > 50) {
+                animationOptions.value.velocity = 80;
+            } else {
+                animationOptions.value.velocity = 100;
+            }
+
+            let duration = 800 * animationOptions.value.velocity / 100;
+
+            animationOptions.value.duration = duration;
+
+
+            console.log('current average:', average)
+            console.log('current velocity:', animationOptions.value.velocity);
+            console.log('current duration:', duration);
         }
 
         // Esta función muestra la animación.
         const showAnimation = () => {
-            recalcVelocity();
-            getRandomFrame();
 
-            // TODO: calcular cuanto tiempo se muestra un frame, para que la animación sea fluida y tomando como refencia 1 segundo la animación completa cuando no haya más pulsaciones, esto disminuye o aumenta la velocidad de la animación según el número de pulsaciones seguidas.
+            if (!hasActiveAnimation.value) {
+                recalcVelocity();
 
-            // Resumen:
-            /**
-             * 1. Obtener un directorio random de frames
-             * 2. Obtener un array de frames aleatorio entre todos los directorios
-             * 3. Calcular velocidad siendo 1s el máximo repartido entre todos los frames 1s/frames = ms de cada frame mostrándose.
-             * 4. Mostrar frames
-             * 5. Repetir si hay más pulsaciones
-             * 6. Si no hay más pulsaciones, mostrar el primer frame de la animación
-             * 7. Actualizar la variable con el total de pulsaciones.
-             */
+                let frames = getRandomFrames();
+                frames.push('/src/assets/frames/initial.png');
 
-             current.value = 0;
+                let totalFrames = frames.length;
+                let frameDuration = animationOptions.value.duration / totalFrames;
+
+                console.log('frameDuration', frameDuration);
+
+                hasActiveAnimation.value = true;
+
+                frames.forEach((frame, index) => {
+                    let nextFrameAt = frameDuration * (index);
+
+                    setTimeout(() => {
+                        currentImage.value = frame;
+
+                        if (index === totalFrames - 1) {
+                            hasActiveAnimation.value = false;
+                        }
+                    }, nextFrameAt);
+                });
+            }
         }
 
+        /**
+         * Callback que se llama cada vez que se reciben datos emitidos por el servidor.
+         * @param data
+         */
         const callbackWebSocket = (data: any) => {
-            console.log(data);
-            //current.value = data;
+            console.log('data', data);
+
+            lastSocketRead.value.pulsations_current = data?.pulsations_current || 0;
+
+            lastSocketRead.value.pulsation_average = data?.pulsation_average || 0;
+
+            lastSocketRead.value.pulsations_total = data?.pulsations_total || 0;
             showAnimation();
         }
 
+        /**
+         * Inicia la conexión al socket del servidor.
+         */
         const initWebSocket = () => {
             const socket = io("ws://localhost:3000");
-            //socket.emit("keycounter", 'test');
+
             socket.on('keycounter', (res:any) => {
-                console.log('res:', res);
-                current.value = res?.current;
+                callbackWebSocket(res);
             });
         }
 
         initWebSocket();
 
-
         return {
-            current
+            lastSocketRead,
+            currentImage,
         }
     },
   });
@@ -94,8 +172,8 @@ import { io } from "socket.io-client";
 
 <style scoped>
 .box-keycounter {
-    width: 800px;
-    height: 300px;
+    width: 950px;
+    height: 350px;
     margin: 0;
     padding: 0;
 }
