@@ -23,7 +23,7 @@ function callbackDataSocket(nread: any, buf: any) {
     const dataRaw = buf.slice(0, nread).toString();
     const data = JSON.parse(dataRaw);
 
-    console.log('Pulsaciones: ' + data.streak?.pulsations_current);
+    //console.log('Pulsaciones: ' + data.streak?.pulsations_current);
 
     if (data && data.session && data.streak) {
       keyCounterStats = { ...keyCounterStats, ...data.session, ...data.streak }

@@ -71,7 +71,7 @@ import { io } from "socket.io-client";
         const getRandomFrames = () => {
             let randomDirName = groupFrames[Math.floor(Math.random() * groupFrames.length)];
 
-            console.log('randomDirName', randomDirName);
+            //console.log('randomDirName', randomDirName);
 
             return getFrames(randomDirName);
         }
@@ -98,10 +98,11 @@ import { io } from "socket.io-client";
 
             animationOptions.value.duration = duration;
 
-
+            /*
             console.log('current average:', average)
             console.log('current velocity:', animationOptions.value.velocity);
             console.log('current duration:', duration);
+            */
         }
 
         // Esta función muestra la animación.
@@ -116,7 +117,7 @@ import { io } from "socket.io-client";
                 let totalFrames = frames.length;
                 let frameDuration = animationOptions.value.duration / totalFrames;
 
-                console.log('frameDuration', frameDuration);
+                //console.log('frameDuration', frameDuration);
 
                 hasActiveAnimation.value = true;
 
@@ -139,7 +140,7 @@ import { io } from "socket.io-client";
          * @param data
          */
         const callbackWebSocket = (data: any) => {
-            console.log('data', data);
+            //console.log('data', data);
 
             lastSocketRead.value.pulsations_current = data?.pulsations_current || 0;
 
