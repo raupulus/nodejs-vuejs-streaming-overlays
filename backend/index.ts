@@ -1,6 +1,7 @@
 import express, { Express, Request, Response } from 'express';
 import dotenv from 'dotenv';
 import { SocketUnixClient } from './src/models/SocketUnixClient';
+import { WebSocketServer } from './src/models/WebSocketServer';
 dotenv.config();
 
 const app: Express = express();
@@ -11,68 +12,65 @@ const port = process.env.PORT;
 const appUrl = process.env.APP_URL;
 const socketPath = process.env.SOCKET_KEYCOUNTER_PATH;
 
-const keyCounterStats = {current: 0, max: 0, min: 0};
+var keyCounterStats = {
+  pulsations_current: 0,
+  pulsations_total: 0,
+  pulsation_average: 0,
+};
 
-function callbackDataSocket(nread:any, buf: any) {
-    console.log('Data: ' + buf.slice(0, nread).toString());
+function callbackDataSocket(nread: any, buf: any) {
+  try {
+    const dataRaw = buf.slice(0, nread).toString();
+    const data = JSON.parse(dataRaw);
 
-    let value = parseInt(buf.slice(0, nread).toString());
+    console.log('Pulsaciones: ' + data.streak?.pulsations_current);
 
-    keyCounterStats.current = value;
+    if (data && data.session && data.streak) {
+      keyCounterStats = { ...keyCounterStats, ...data.session, ...data.streak }
+    }
 
-
-     io.emit('keycounter', keyCounterStats);
-
+    if (webSocketServer) {
+      webSocketServer.emit('keycounter', keyCounterStats);
+    }
+  } catch (error) {
+    console.log('Error al parsear el JSON');
+  }
 }
+
+let webSocketHandlers = [
+  {
+    event: 'connection',
+    callback: (socket: any) => {
+      console.log('New Client Connected');
+    }
+  },
+  {
+    event: 'disconnect',
+    callback: () => {
+      console.log('Client Disconnected');
+    }
+  },
+  {
+    event: 'keycounter',
+    callback: () => { console.log('LLEGA BIEN') }
+  }
+];
+
+let webSocketServer = new WebSocketServer(webSocketHandlers);
+
 
 // Se inicia el socket solo si lo hemos establecido
 if (socketPath) {
-    const socketUnixKeycounter = new SocketUnixClient(socketPath, callbackDataSocket);
-
-
-
-
+  const socketUnixKeycounter = new SocketUnixClient(socketPath, callbackDataSocket);
 }
 
-// TODO: extraer a una clase independiente
-
-import { Server } from "socket.io";
-
-const io = new Server(3000, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-    //allowedHeaders: ["my-custom-header"],
-    credentials: false
-  }
-});
-
-io.on('connection', (socket: any) => {
-  console.log('a user connected');
-  if (socketPath) {
-    socket.broadcast.emit('keycounter', keyCounterStats);
-  }
-
-  socket.on('keycounter', () => {
-    console.log('Recibe keycounter desde el cliente');
-
-    io.emit('keycounter', keyCounterStats);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('user disconnected');
-  });
-});
-
-
-
 app.get('/', (req: Request, res: Response) => {
-    res.send('Página Principal');
-    });
+  res.send('Página Principal');
+});
 
 app.get('/keycounter', (req: Request, res: Response) => {
-    res.send('Este es el keycounter!');
-    });
+  res.send('Este es el keycounter!');
+});
 
 /**
 app.get('/', (req, res) => {
@@ -81,5 +79,5 @@ app.get('/', (req, res) => {
  */
 
 app.listen(port, () => {
-    console.log(`Example app listening at ${appUrl}`);
+  console.log(`Example app listening at ${appUrl}`);
 });
